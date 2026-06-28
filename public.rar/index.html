@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LK VIII — Кланы сервера</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-color: #1e1e1e;
+            --accent-color: #4caf50;
+            --danger-color: #f44336;
+            --text-color: #e0e0e0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        header h1 {
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+        .form-panel, .clans-panel {
+            background: var(--panel-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 18px 0;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: var(--accent-color);
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        
+        /* Сетка кланов */
+        .clans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .clan-card {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 15px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .clan-logo {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid var(--accent-color);
+            background: #111;
+        }
+        .clan-name { margin: 12px 0 4px 0; font-size: 1.3em; color: #fff; }
+        .clan-leader { font-size: 0.9em; color: #888; margin-bottom: 10px; }
+        .clan-members { font-size: 0.85em; color: #bbb; background: #1a1a1a; padding: 8px; width: 100%; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Кнопка удаления для Разработчика */
+        .delete-btn {
+            background: var(--danger-color);
+            margin-top: auto;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            width: auto;
+        }
+        .admin-toggle {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>LK VIII — Реестр Кланов</h1>
+        <p>Добавь свой клан и заяви о себе на сервере!</p>
+    </header>
+
+    <!-- Переключатель режима разработчика -->
+    <div class="admin-toggle">
+        <label><input type="checkbox" id="adminMode" style="width: auto; margin: 0 5px 0 0;"> Режим Разработчика (Удаление)</label>
+    </div>
+
+    <div class="container">
+        <!-- Форма регистрации клана -->
+        <div class="form-panel">
+            <h3>Регистрация клана</h3>
+            <form action="/api/clans" method="POST" enctype="multipart/form-data">
+                <label>Название клана:</label>
+                <input type="text" name="name" required placeholder="Например: DarkKnights">
+
+                <label>Ник Лидера:</label>
+                <input type="text" name="leader" required placeholder="Ник на сервере">
+
+                <label>Участники (через запятую):</label>
+                <textarea name="members" rows="4" placeholder="Player1, Player2, Player3"></textarea>
+
+                <label>Логотип клана (Картинка):</label>
+                <input type="file" name="logo" accept="image/*">
+
+                <button type="submit">Создать Клан</button>
+            </form>
+        </div>
+
+        <!-- Список кланов -->
+        <div class="clans-panel">
+            <h3>Список зарегистрированных кланов</h3>
+            <div class="clans-grid" id="clansContainer">
+                <!-- Сюда загружаются кланы из базы -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const clansContainer = document.getElementById('clansContainer');
+        const adminModeCheckbox = document.getElementById('adminMode');
+
+        // Функция для загрузки и отображения кланов
+        async function loadClans() {
+            clansContainer.innerHTML = '<p>Загрузка кланов...</p>';
+            const res = await fetch('/api/clans');
+            const clans = await res.json();
+            
+            clansContainer.innerHTML = '';
+            if(clans.length === 0) {
+                clansContainer.innerHTML = '<p>Пока нет ни одного клана. Будь первым!</p>';
+                return;
+            }
+
+            clans.forEach(clan => {
+                const isFormVisible = adminModeCheckbox.checked ? 'block' : 'none';
+                
+                const card = document.createElement('div');
+                card.className = 'clan-card';
+                card.innerHTML = `
+                    <img src="${clan.logo}" class="clan-logo" alt="Логотип">
+                    <div class="clan-name">${escapeHTML(clan.name)}</div>
+                    <div class="clan-leader">Лидер: <b>${escapeHTML(clan.leader)}</b></div>
+                    <div class="clan-members">
+                        <b>Участники:</b><br>
+                        ${clan.members.length > 0 ? clan.members.map(escapeHTML).join(', ') : 'Только лидер'}
+                    </div>
+                    <button class="delete-btn" style="display: ${isFormVisible}" onclick="deleteClan('${clan.id}')">Удалить клан</button>
+                `;
+                clansContainer.appendChild(card);
+            });
+        }
+
+        // Функция удаления клана (доступна админу)
+        async function deleteClan(id) {
+            if (confirm('Вы уверены, что хотите удалить этот клан?')) {
+                const res = await fetch(`/api/api/clans/${id}`, { method: 'DELETE' }); // Исправлен путь ниже
+                // Правильный fetch запрос:
+                const response = await fetch(`/api/clans/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadClans();
+                } else {
+                    alert('Ошибка при удалении');
+                }
+            }
+        }
+
+        // Показать/скрыть кнопки удаления при переключении галочки разработчика
+        adminModeCheckbox.addEventListener('change', loadClans);
+
+        // Безопасность (защита от XSS)
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Запуск при загрузке страницы
+        loadClans();
+    </script>
+</body>
+</html>
