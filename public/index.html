@@ -182,20 +182,27 @@
             });
         }
 
-        // Функция удаления клана (доступна админу)
-        async function deleteClan(id) {
-            if (confirm('Вы уверены, что хотите удалить этот клан?')) {
-                const res = await fetch(`/api/api/clans/${id}`, { method: 'DELETE' }); // Исправлен путь ниже
-                // Правильный fetch запрос:
-                const response = await fetch(`/api/clans/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    loadClans();
-                } else {
-                    alert('Ошибка при удалении');
-                }
-            }
-        }
+        // Функция удаления клана (теперь запрашивает пароль)
+async function deleteClan(id) {
+    const password = prompt('Введите секретный пароль разработчика для удаления:');
+    
+    if (!password) return; // Если нажал "Отмена"
 
+    const response = await fetch(`/api/clans/${id}`, { 
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: password }) // Отправляем введенный пароль на сервер
+    });
+
+    if (response.ok) {
+        alert('Клан успешно удален!');
+        loadClans();
+    } else {
+        alert('Ошибка! Неверный пароль разработчика.');
+    }
+}
         // Показать/скрыть кнопки удаления при переключении галочки разработчика
         adminModeCheckbox.addEventListener('change', loadClans);
 
