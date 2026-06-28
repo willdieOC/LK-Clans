@@ -59,11 +59,19 @@ app.post('/api/clans', upload.single('logo'), (req, res) => {
     res.redirect('/'); // Перенаправляем обратно на главную
 });
 
-// 3. Удалить клан (Админская функция для тебя)
+// 3. Удалить клан (С ЗАЩИТОЙ ПО ПАРОЛЮ)
 app.delete('/api/clans/:id', (req, res) => {
     const { id } = req.params;
+    const { password } = req.body; // Получаем пароль от пользователя
+
+    // ТВОЙ СЕКРЕТНЫЙ ПАРОЛЬ (измени на свой!)
+    const SECRET_PASSWORD = "willdiepasssite"; 
+
+    if (password !== SECRET_PASSWORD) {
+        return res.status(403).send('Неверный пароль администратора!');
+    }
     
-    // Удаляем файл логотипа, если он не дефолтный
+    // Если пароль верный — удаляем
     const clan = db.get('clans').find({ id }).value();
     if (clan && clan.logo !== '/uploads/default.png') {
         const filePath = path.join(__dirname, 'public', clan.logo);
@@ -72,8 +80,4 @@ app.delete('/api/clans/:id', (req, res) => {
 
     db.get('clans').remove({ id }).write();
     res.sendStatus(200);
-});
-
-app.listen(PORT, () => {
-    console.log(`Сервер LK VIII запущен на http://localhost:${PORT}`);
 });
